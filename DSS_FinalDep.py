@@ -47,7 +47,7 @@ def train_engines(df):
     # Split data for validation
     X_train, X_test, y_train, y_test = train_test_split(X, y_final, test_size=0.2, random_state=42)
 
-    # Train Logistic Regression
+    # Train Linear Regression Models
     model_final = LinearRegression().fit(X_train, y_train)
     model_concept = LinearRegression().fit(X, y_concept) # Trained on all for simulator accuracy
 
@@ -58,10 +58,11 @@ def train_engines(df):
         "mse": mean_squared_error(y_test, y_pred)
     }
     
-    return model_final, model_concept, metrics, features
+    # Return values must match the initialization call below
+    return df, model_concept, model_final, metrics, features
 
-# Initialize everything
-df, model_concept, model_final, stats, feature_list = get_trained_models()
+# Initialize everything - Calling the correct function name
+df, model_concept, model_final, stats, feature_list = train_engines(df)
 
 # --- 2. SIDEBAR: THE SIMULATOR INPUTS ---
 st.sidebar.header("🕹️ Learning Style Simulator")
@@ -79,6 +80,7 @@ with tabs[0]:
     st.header("The Learning Style Simulator")
     
     # Predict using the input order matching the trained features
+    # Order: ai_dependency_score, study_hours_per_day, ai_generated_content_percentage, attendance_percentage
     user_input = np.array([[ai_dep, hrs, ai_pct, attendance]])
     pred_understanding = model_concept.predict(user_input)[0]
     pred_final = model_final.predict(user_input)[0]

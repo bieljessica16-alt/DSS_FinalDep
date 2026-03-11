@@ -7,82 +7,76 @@ from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import accuracy_score
 
+# Set page layout
 st.set_page_config(page_title="AI Impact Study", layout="wide")
 
-st.title("📊 AI & Student Performance: Impact Analysis")
+# Title and Context
+st.title("📊 Study: The Impact of AI on Student Learning")
+st.markdown("""
+This dashboard presents the findings on whether AI dependency affects conceptual understanding 
+and academic success. Use the sections below to explore the data and statistical proofs.
+""")
 
-# 1. LOAD DATA
+# 1. DATA LOADING
 @st.cache_data
 def load_data():
+    # Make sure this filename matches your file on GitHub
     df = pd.read_csv('ai_impact_student_performance_dataset.csv')
     return df
 
 df = load_data()
 
-# SIDEBAR
-st.sidebar.header("Explore the Data")
-page = st.sidebar.radio("Go to", ["Overview", "Correlation Heatmap", "AI vs Understanding", "Pass/Fail Predictor"])
+# 2. KEY METRICS
+st.header("📌 Key Performance Indicators")
+col1, col2, col3, col4 = st.columns(4)
+col1.metric("Total Students", len(df))
+col2.metric("Avg Understanding", f"{df['concept_understanding_score'].mean():.2f}/10")
+col3.metric("Avg AI Dependency", f"{df['ai_dependency_score'].mean():.2f}/10")
+col4.metric("Passing Rate", f"{(df['passed'].mean()*100):.1f}%")
 
-# PAGE 1: OVERVIEW
-if page == "Overview":
-    st.header("Project Dataset Overview")
-    st.write("Does AI usage hinder learning? We analyze 8,000 students to find out.")
-    st.dataframe(df.head())
+st.divider()
 
-# PAGE 2: CORRELATION HEATMAP
-elif page == "Correlation Heatmap":
-    st.header("Variable Correlation Heatmap")
-    st.write("This map shows the statistical link between all variables.")
-    
-    # Selecting numerical columns only
-    cols = ['ai_dependency_score', 'ai_generated_content_percentage', 
-            'concept_understanding_score', 'study_hours_per_day', 'final_score']
-    
-    fig, ax = plt.subplots(figsize=(10, 6))
-    sns.heatmap(df[cols].corr(), annot=True, cmap='coolwarm', fmt=".2f", ax=ax)
-    st.pyplot(fig)
-    
-    st.info("💡 **Insight:** Notice the 0.42 correlation between Understanding and Final Score. Notice the near-zero correlation (0.02) between AI Dependency and Understanding.")
+# 3. CORRELATION HEATMAP (Visual Evidence)
+st.header("📉 Statistical Relationships (Heatmap)")
+st.write("We use this to see if AI usage (Dependency/Content) correlates with lower understanding.")
 
-# PAGE 3: AI VS UNDERSTANDING (LINEAR REGRESSION)
-elif page == "AI vs Understanding":
-    st.header("Statistical Proof: Is AI Hurting Learning?")
-    
-    # Predicting Understanding based on AI factors
-    X = df[['ai_dependency_score', 'ai_generated_content_percentage', 'study_hours_per_day']]
-    y = df['concept_understanding_score']
-    X = sm.add_constant(X)
-    
-    model = sm.OLS(y, X).fit()
-    st.text(str(model.summary()))
-    st.markdown("### 📢 Result: AI dependency does NOT predict lower understanding scores.")
+# Select relevant columns for the heatmap
+corr_cols = ['ai_dependency_score', 'ai_generated_content_percentage', 
+             'concept_understanding_score', 'study_hours_per_day', 'final_score']
+corr_matrix = df[corr_cols].corr()
 
-# PAGE 4: PASS/FAIL PREDICTOR (LOGISTIC REGRESSION)
-elif page == "Pass/Fail Predictor":
-    st.header("AI Predictor: Will the Student Pass?")
-    st.write("Using Logistic Regression from `sklearn` to predict Pass (1) or Fail (0).")
+fig_heat, ax_heat = plt.subplots(figsize=(10, 6))
+sns.heatmap(corr_matrix, annot=True, cmap='RdBu_r', center=0, fmt=".2f", ax=ax_heat)
+st.pyplot(fig_heat)
 
-    # Prepare data for sklearn
-    features = ['ai_dependency_score', 'concept_understanding_score', 'study_hours_per_day']
-    X = df[features]
-    y = df['passed']
-    
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-    
-    lr_model = LogisticRegression()
-    lr_model.fit(X_train, y_train)
-    
-    y_pred = lr_model.predict(X_test)
-    acc = accuracy_score(y_test, y_pred)
-    
-    st.metric("Model Accuracy", f"{acc*100:.2f}%")
-    
-    # User Input for Prediction
-    st.subheader("Try it yourself:")
-    dep = st.slider("AI Dependency Score", 0, 10, 5)
-    und = st.slider("Concept Understanding", 0, 10, 5)
-    hrs = st.slider("Study Hours/Day", 0, 10, 3)
-    
-    prediction = lr_model.predict([[dep, und, hrs]])
-    result = "✅ PASS" if prediction[0] == 1 else "❌ FAIL"
-    st.title(f"Prediction: {result}")
+st.info("💡 **Key Finding:** There is almost **zero correlation** between AI Dependency and Understanding. This suggests that using AI tools does not inherently decrease a student's grasp of the material.")
+
+st.divider()
+
+# 4. STATISTICAL PROOF (Multiple Linear Regression)
+st.header("⚖️ Does AI Predict Understanding?")
+st.write("This regression model checks if AI usage is a significant 'predictor' of learning loss.")
+
+X_lin = df[['ai_dependency_score', 'ai_generated_content_percentage', 'study_hours_per_day']]
+y_lin = df['concept_understanding_score']
+X_lin = sm.add_constant(X_lin)
+lin_model = sm.OLS(y_lin, X_lin).fit()
+
+# Displaying results in a clean way
+st.text(str(lin_model.summary().tables[1]))
+st.write("**Conclusion:** High P-values (P > |t|) for AI scores confirm that AI usage is **not** a statistically significant cause of lower understanding.")
+
+st.divider()
+
+# 5. PASS/FAIL PREDICTOR (Logistic Regression)
+st.header("🤖 Live Predictor: Will a Student Pass?")
+st.write("Using `scikit-learn` to predict if a student will pass based on their habits.")
+
+# Prepare Logistic Regression
+features = ['ai_dependency_score', 'concept_understanding_score', 'study_hours_per_day']
+X_log = df[features]
+y_log = df['passed']
+
+X_train, X_test, y_train, y_test = train_test_split(X_log, y_log, test_size=0.2, random_state=42)
+lr_model = LogisticRegression()
+lr_model.fit(X_train, y_train)

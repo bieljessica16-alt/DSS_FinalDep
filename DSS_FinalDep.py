@@ -96,35 +96,125 @@ with tabs[0]:
         st.warning("### ⚠️ Verdict: Risk of Learning Loss\nYour current habits suggest your understanding is dipping. Increase manual study or attendance.")
 
 # TAB 2: STATISTICAL PROOF
+# TAB 2: STATISTICAL PROOF (Regression)
+
 with tabs[1]:
+
     st.header("⚖️ The Statistical Reality")
-    st.write("We used **Linear Regression** to see if AI variables 'tank' understanding.")
+
+    st.write("We used **Linear Regression** to see if AI variables 'tank' a student's actual understanding.")
+
     
-    # Displaying the REAL R^2 from the training results
-    r_squared = stats['r2']
+
+    # 1. Top Level Metrics
+
+    r_squared = 0.0007  # Your specific result
+
     m1, m2 = st.columns([1, 2])
+
+    
+
     with m1:
+
         st.metric("Model Predictive Power (R²)", f"{r_squared:.4f}")
+
     with m2:
-        st.info(f"**Insight:** An R² of {r_squared:.4f} means these factors only explain {r_squared*100:.2f}% of the score. This proves that AI isn't the 'grade-killer' people fear.")
+
+        st.info(f"**Insight:** An R² of {r_squared} means these factors only explain 0.07% of the score. This proves that AI isn't the 'grade-killer' people fear; performance is likely driven by external factors like prior knowledge or teaching quality.")
+
+
 
     st.divider()
-    
-    # Impact Weights using Real Model Coefficients
-    coef_df = pd.DataFrame({
-        "Variable": feature_list,
-        "Impact Weight": model_final.coef_
-    }).sort_values(by="Impact Weight", ascending=False)
-    
-    st.subheader("Visualizing Feature Importance")
-    fig_coef, ax_coef = plt.subplots(figsize=(8, 4))
-    colors = ['#27AE60' if x > 0 else '#E74C3C' for x in coef_df['Impact Weight']]
-    sns.barplot(x='Impact Weight', y='Variable', data=coef_df, palette=colors, ax=ax_coef)
-    st.pyplot(fig_coef)
 
+
+
+    # 2. Data & Visualization
+
+    col_table, col_viz = st.columns([2, 3])
+
+
+
+    with col_table:
+
+        st.subheader("Impact Coefficients")
+
+        # Building the dataframe from your provided results
+
+        coef_data = {
+
+            "Variable": ["Study Hours", "AI Content %", "AI Dependency", "Grade Level", "Uses AI"],
+
+            "Impact Weight": [0.0491, 0.0473, 0.0441, 0.0390, -0.0454]
+
+        }
+
+        coef_df = pd.DataFrame(coef_data).sort_values(by="Impact Weight", ascending=False)
+
+        
+
+        # Displaying a styled table
+
+        st.table(coef_df)
+
+
+
+    with col_viz:
+
+        st.subheader("Visualizing Feature Importance")
+
+        fig_coef, ax_coef = plt.subplots(figsize=(8, 5))
+
+        
+
+        # Logic: Green for positive impact, Red for negative
+
+        colors = ['#27AE60' if x > 0 else '#E74C3C' for x in coef_df['Impact Weight']]
+
+        
+
+        sns.barplot(x='Impact Weight', y='Variable', data=coef_df, palette=colors, ax=ax_coef)
+
+        ax_coef.set_title("Which factors move the needle?")
+
+        ax_coef.set_xlabel("Coefficient Value (Direction of Impact)")
+
+        st.pyplot(fig_coef)
+
+
+
+    st.divider()
+
+
+
+    # 3. The "So What?" Section
+
+    st.markdown("### 🔍 What does this tell us?")
+
+    
+
+    st.warning(f"""
+
+    **The AI Paradox:** Notice that simply *using* AI (`uses_ai`: -0.0454) has a tiny negative weight, 
+
+    but **AI Dependency** and **Content %** are both *positive*. 
+
+
+
+    **The Verdict:** It's not *if* you use AI, but *how* you use it. Deep integration (High Dependency) 
+
+    correlates with slightly better understanding than just using it as a surface-level shortcut.
+
+    """)
+
+
+
+    st.success("**Mic Drop Conclusion:** With coefficients this close to zero, AI is statistically 'neutral.' It is a tool that depends entirely on the user's intent.")
+
+    
 # TAB 3: HEATMAP
 with tabs[2]:
     st.header("Variable Correlation")
     fig2, ax2 = plt.subplots(figsize=(10, 6))
     sns.heatmap(df.corr(), annot=True, cmap='coolwarm', ax=ax2)
     st.pyplot(fig2)
+

@@ -12,7 +12,7 @@ from sklearn.preprocessing import LabelEncoder, StandardScaler
 st.set_page_config(page_title="AI Efficiency Study", layout="wide")
 
 # --- Title ---
-st.title("🤖 The AI Paradox: Measuring Learning Efficiency vs. Dependency")
+st.title("#🤖 Measuring Concept Understanding and Final Score")
 st.markdown("### **DSS110 Final Project | Group Members:**")
 st.write("Busano, Cortez, Geronimo, Monses, & Perez")
 st.divider()
@@ -232,4 +232,5 @@ with tabs[2]:
     fig2, ax2 = plt.subplots(figsize=(10, 8))
     sns.heatmap(corr_matrix, annot=True, cmap='coolwarm', fmt='.2f', linewidths=.5, ax=ax2)
     st.pyplot(fig2)
+
 

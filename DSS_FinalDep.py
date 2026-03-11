@@ -146,7 +146,7 @@ with tabs[0]:
     # --- DESCRIPTION BOXES ---
     st.markdown("### 🔍 Why are my results like this?")
     exp1, exp2, exp3 = st.columns(3)
-    
+
     with exp1:
         st.info("**Why only ~5.5 Understanding?**\n\nThe data shows an 'Understanding Plateau.' Adding more hours only adds tiny fractions to understanding. This proves quality matters more than quantity.")
     
@@ -156,20 +156,7 @@ with tabs[0]:
     with exp3:
         st.info("**What is Proficiency Parity?**\n\n**100% means you are performing exactly as well as a 'Traditional Student'** (5+ hrs, No AI). High parity proves AI efficiency.")
 
-    # Visual Comparison
-    st.divider()
-    st.markdown("### Your Profile vs. Traditional Gold Standard")
-    chart_data = pd.DataFrame({
-        "Category": ["Your Profile", "Traditional (High Effort, No AI)"],
-        "Understanding Score": [pred_understanding, traditional_grind]
-    })
-    
-    fig, ax = plt.subplots(figsize=(8, 3))
-    sns.barplot(data=chart_data, x="Understanding Score", y="Category", palette=["#2E86C1", "#ABB2B9"], ax=ax)
-    ax.set_xlim(0, 10)
-    st.pyplot(fig)
-
-    # THE VERDICT
+     # THE VERDICT
     st.divider()
     if efficiency_gap >= 95:
         st.success(f"### ✅ Verdict: Efficient Mastery\nYou are achieving {efficiency_gap:.1f}% of traditional mastery. You are using AI as an efficiency tool without losing performance.")
@@ -178,6 +165,7 @@ with tabs[0]:
     else:
         st.warning("### ⚠️ Verdict: Risk of Learning Loss\nYour current habits suggest your understanding is dipping. Increase manual study.")
 
+   
 # TAB 2: STATISTICAL PROOF (Regression)
 with tabs[1]:
     st.header("⚖️ The Statistical Reality")
@@ -244,3 +232,4 @@ with tabs[2]:
     fig2, ax2 = plt.subplots(figsize=(10, 8))
     sns.heatmap(corr_matrix, annot=True, cmap='coolwarm', fmt='.2f', linewidths=.5, ax=ax2)
     st.pyplot(fig2)
+

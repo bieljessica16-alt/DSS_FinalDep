@@ -3,100 +3,101 @@ import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
 import statsmodels.api as sm
-import numpy as np
-from sklearn.linear_model import LinearRegression
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import accuracy_score
 
-st.set_page_config(page_title="AI Efficiency Study", layout="wide")
+# Set page layout
+st.set_page_config(page_title="AI Impact Study", layout="wide")
 
-# 1. LOAD & PREP DATA
+# Title and Context
+st.title("📊 Study: The Impact of AI on Student Learning")
+st.markdown("""
+This dashboard presents the findings on whether AI dependency affects conceptual understanding 
+and academic success. Use the sections below to explore the data and statistical proofs.
+""")
+
+# 1. DATA LOADING
 @st.cache_data
 def load_data():
-    # Ensure your CSV is named exactly this in your GitHub repo
+    # Make sure this filename matches your file on GitHub
     df = pd.read_csv('ai_impact_student_performance_dataset.csv')
     return df
 
 df = load_data()
 
-# 2. TRAIN THE "ENGINE" (Simple Linear Regression for the Simulator)
-# We train it once on startup so the sliders can use it live
-features = ['ai_dependency_score', 'study_hours_per_day', 'ai_generated_content_percentage']
-X = df[features]
-y_concept = df['concept_understanding_score']
-y_final = df['final_score']
+# 2. KEY METRICS
+st.header("📌 Key Performance Indicators")
+col1, col2, col3, col4 = st.columns(4)
+col1.metric("Total Students", len(df))
+col2.metric("Avg Understanding", f"{df['concept_understanding_score'].mean():.2f}/10")
+col3.metric("Avg AI Dependency", f"{df['ai_dependency_score'].mean():.2f}/10")
+col4.metric("Passing Rate", f"{(df['passed'].mean()*100):.1f}%")
 
-model_concept = LinearRegression().fit(X, y_concept)
-model_final = LinearRegression().fit(X, y_final)
+st.divider()
 
-# --- SIDEBAR: THE SIMULATOR INPUTS ---
-st.sidebar.header("🕹️ Learning Style Simulator")
-st.sidebar.markdown("Adjust these to see the 'AI Paradox' in action.")
+# 3. CORRELATION HEATMAP (Visual Evidence)
+st.header("📉 Statistical Relationships (Heatmap)")
+st.write("We use this to see if AI usage (Dependency/Content) correlates with lower understanding.")
 
-grade = st.sidebar.selectbox("Grade Level", ["10th Grade", "11th Grade", "12th Grade", "1st Year College", "2nd Year College", "3rd Year College"])
-hrs = st.sidebar.slider("Study Hours Per Day", 0.5, 10.0, 3.0)
-ai_dep = st.sidebar.slider("AI Dependency (1-10)", 1, 10, 5)
-ai_pct = st.sidebar.slider("AI Content Percentage", 0, 100, 30)
+# Select relevant columns for the heatmap
+corr_cols = ['ai_dependency_score', 'ai_generated_content_percentage', 
+             'concept_understanding_score', 'study_hours_per_day', 'final_score']
+corr_matrix = df[corr_cols].corr()
 
-# --- MAIN PAGE ---
-st.title("📊 AI & Student Performance: The Efficiency Multiplier")
+fig_heat, ax_heat = plt.subplots(figsize=(10, 6))
+sns.heatmap(corr_matrix, annot=True, cmap='RdBu_r', center=0, fmt=".2f", ax=ax_heat)
+st.pyplot(fig_heat)
 
-tabs = st.tabs(["The Simulator", "Data Proof", "Correlation"])
+st.info("💡 **Key Finding:** There is almost **zero correlation** between AI Dependency and Understanding. This suggests that using AI tools does not inherently decrease a student's grasp of the material.")
 
-# TAB 1: THE INTERACTIVE STORY
-with tabs[0]:
-    st.header("The Learning Style Simulator")
-    st.write("Can AI replace the 4-hour grind? Simulate your profile below.")
+st.divider()
 
-    # Calculations
-    user_input = np.array([[ai_dep, hrs, ai_pct]])
-    pred_understanding = model_concept.predict(user_input)[0]
-    pred_final = model_final.predict(user_input)[0]
+# 4. STATISTICAL PROOF (Multiple Linear Regression)
+st.header("⚖️ Does AI Predict Understanding?")
+st.write("This regression model checks if AI usage is a significant 'predictor' of learning loss.")
+
+X_lin = df[['ai_dependency_score', 'ai_generated_content_percentage', 'study_hours_per_day']]
+y_lin = df['concept_understanding_score']
+X_lin = sm.add_constant(X_lin)
+lin_model = sm.OLS(y_lin, X_lin).fit()
+
+# Displaying results in a clean way
+st.text(str(lin_model.summary().tables[1]))
+st.write("**Conclusion:** High P-values (P > |t|) for AI scores confirm that AI usage is **not** a statistically significant cause of lower understanding.")
+
+st.divider()
+
+# 5. PASS/FAIL PREDICTOR (Logistic Regression)
+st.header("🤖 Live Predictor: Will a Student Pass?")
+st.write("Using `scikit-learn` to predict if a student will pass based on their habits.")
+
+# Prepare Logistic Regression
+features = ['ai_dependency_score', 'concept_understanding_score', 'study_hours_per_day']
+X_log = df[features]
+y_log = df['passed']
+
+X_train, X_test, y_train, y_test = train_test_split(X_log, y_log, test_size=0.2, random_state=42)
+lr_model = LogisticRegression()
+lr_model.fit(X_train, y_train)
+
+# Interactive UI for User
+col_input, col_result = st.columns([1, 1])
+
+with col_input:
+    st.subheader("Adjust Student Stats")
+    user_dep = st.slider("AI Dependency (0-10)", 0, 10, 5)
+    user_und = st.slider("Concept Understanding (0-10)", 0, 10, 7)
+    user_hrs = st.slider("Study Hours Per Day", 0, 10, 3)
+
+with col_result:
+    prediction = lr_model.predict([[user_dep, user_und, user_hrs]])
+    prob = lr_model.predict_proba([[user_dep, user_und, user_hrs]])[0][1]
     
-    # Traditional Benchmark (Hardcoded based on your 98.4% finding)
-    # Average of students with 5+ study hours and < 2 AI dependency
-    benchmark_score = df[(df['study_hours_per_day'] >= 5) & (df['ai_dependency_score'] < 2)]['final_score'].mean()
-    efficiency_gap = (pred_final / benchmark_score) * 100
-
-    # Layout Columns
-    col1, col2, col3 = st.columns(3)
-    col1.metric("Predicted Understanding", f"{pred_understanding:.2f}/10")
-    col2.metric("Predicted Final Score", f"{pred_final:.1f}%")
-    col3.metric("Proficiency Parity", f"{efficiency_gap:.1f}%", help="How close you are to a high-effort traditional student")
-
-    # Visual Comparison
-    st.markdown("### User vs. Traditional Gold Standard")
-    chart_data = pd.DataFrame({
-        "Category": ["Your Profile", "Traditional (5+ Hrs, No AI)"],
-        "Final Score": [pred_final, benchmark_score]
-    })
-    
-    fig, ax = plt.subplots(figsize=(8, 3))
-    sns.barplot(data=chart_data, x="Final Score", y="Category", palette=["#2E86C1", "#ABB2B9"], ax=ax)
-    ax.set_xlim(0, 100)
-    st.pyplot(fig)
-
-    # THE VERDICT BOX
-    st.divider()
-    if efficiency_gap >= 95:
-        st.success(f"### ✅ Verdict: Efficient Mastery\nYou are achieving {efficiency_gap:.1f}% of traditional mastery while utilizing AI for efficiency. This supports the 'Efficiency Multiplier' theory.")
-    elif efficiency_gap >= 85:
-        st.info("### ℹ️ Verdict: Balanced Learning\nYou are maintaining solid performance with a hybrid approach.")
+    st.subheader("Model Result")
+    if prediction[0] == 1:
+        st.success(f"PREDICTION: PASS (Confidence: {prob*100:.1f}%)")
     else:
-        st.warning("### ⚠️ Verdict: Diminishing Returns\nYour current configuration suggests lower retention. Consider increasing manual study hours.")
+        st.error(f"PREDICTION: FAIL (Confidence: {(1-prob)*100:.1f}%)")
 
-# TAB 2: STATISTICAL PROOF
-with tabs[1]:
-    st.header("Does AI 'Tank' Brainpower?")
-    st.write("Statistical Regression showing that AI variables do not negatively impact understanding.")
-    
-    X_stats = sm.add_constant(X)
-    stats_model = sm.OLS(y_concept, X_stats).fit()
-    st.text(str(stats_model.summary()))
-    
-    st.markdown("> **The Mic Drop:** Notice the p-values. AI dependency does not have a statistically significant negative coefficient, proving it's a neutral-to-positive tool.")
-
-# TAB 3: HEATMAP
-with tabs[2]:
-    st.header("Variable Correlation")
-    fig2, ax2 = plt.subplots()
-    sns.heatmap(df.corr(numeric_only=True), annot=True, cmap='coolwarm', ax=ax2)
-    st.pyplot(fig2)
+st.caption(f"Model Accuracy Score: {accuracy_score(y_test, lr_model.predict(X_test))*100:.2f}%")

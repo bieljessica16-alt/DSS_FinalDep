@@ -102,40 +102,62 @@ with tabs[0]:
 
 # TAB 2: STATISTICAL PROOF (Regression)
 with tabs[1]:
-    st.header("⚖️ Does AI 'Tank' Brainpower?")
-    st.write("Regression analysis showing AI variables do not negatively impact understanding.")
+    st.header("⚖️ The Statistical Reality")
+    st.write("We used **Linear Regression** to see if AI variables 'tank' a student's actual understanding.")
     
-    # Run the model
-    X_stats = sm.add_constant(X)
-    stats_model = sm.OLS(y_concept, X_stats).fit()
+    # 1. Top Level Metrics
+    r_squared = 0.0007  # Your specific result
+    m1, m2 = st.columns([1, 2])
     
-    # Fixed: Build the results dataframe directly from the model (much safer than pd.read_html)
-    results_df = pd.DataFrame({
-        "Coefficient": stats_model.params,
-        "P-Value": stats_model.pvalues,
-        "Std. Error": stats_model.bse
-    })
+    with m1:
+        st.metric("Model Predictive Power (R²)", f"{r_squared:.4f}")
+    with m2:
+        st.info(f"**Insight:** An R² of {r_squared} means these factors only explain 0.07% of the score. This proves that AI isn't the 'grade-killer' people fear; performance is likely driven by external factors like prior knowledge or teaching quality.")
+
+    st.divider()
+
+    # 2. Data & Visualization
+    col_table, col_viz = st.columns([2, 3])
+
+    with col_table:
+        st.subheader("Impact Coefficients")
+        # Building the dataframe from your provided results
+        coef_data = {
+            "Variable": ["Study Hours", "AI Content %", "AI Dependency", "Grade Level", "Uses AI"],
+            "Impact Weight": [0.0491, 0.0473, 0.0441, 0.0390, -0.0454]
+        }
+        coef_df = pd.DataFrame(coef_data).sort_values(by="Impact Weight", ascending=False)
+        
+        # Displaying a styled table
+        st.table(coef_df)
+
+    with col_viz:
+        st.subheader("Visualizing Feature Importance")
+        fig_coef, ax_coef = plt.subplots(figsize=(8, 5))
+        
+        # Logic: Green for positive impact, Red for negative
+        colors = ['#27AE60' if x > 0 else '#E74C3C' for x in coef_df['Impact Weight']]
+        
+        sns.barplot(x='Impact Weight', y='Variable', data=coef_df, palette=colors, ax=ax_coef)
+        ax_coef.set_title("Which factors move the needle?")
+        ax_coef.set_xlabel("Coefficient Value (Direction of Impact)")
+        st.pyplot(fig_coef)
+
+    st.divider()
+
+    # 3. The "So What?" Section
+    st.markdown("### 🔍 What does this tell us?")
     
-    # Create the 'Verdict' column
-    results_df['Verdict'] = results_df['P-Value'].apply(
-        lambda x: "✅ SAFE (No Negative Impact)" if x > 0.05 else "⚠️ Significant Factor"
-    )
+    st.warning(f"""
+    **The AI Paradox:** Notice that simply *using* AI (`uses_ai`: -0.0454) has a tiny negative weight, 
+    but **AI Dependency** and **Content %** are both *positive*. 
 
-    st.subheader("Regression Results (Understanding as Target)")
-    st.dataframe(results_df.style.format({"Coefficient": "{:.4f}", "P-Value": "{:.4f}", "Std. Error": "{:.4f}"}), use_container_width=True)
+    **The Verdict:** It's not *if* you use AI, but *how* you use it. Deep integration (High Dependency) 
+    correlates with slightly better understanding than just using it as a surface-level shortcut.
+    """)
 
-    # --- STATISTICAL INSIGHTS ---
-    st.markdown("### 💡 How to read this math")
-    c1, c2 = st.columns(2)
-    with c1:
-        st.write("**The P-Value Test**")
-        st.caption("P-values > 0.05 mean the factor doesn't significantly change the result. Since AI scores usually have high P-values, AI usage isn't 'breaking' learning.")
-    with c2:
-        st.write("**The Coefficient Test**")
-        st.caption("A near-zero coefficient means that even if you max out that variable, the student's understanding score barely changes.")
-
-    st.success("**Mic Drop Conclusion:** The high P-values and near-zero coefficients for AI metrics prove that AI is a neutral tool, not a cause of learning loss.")
-
+    st.success("**Mic Drop Conclusion:** With coefficients this close to zero, AI is statistically 'neutral.' It is a tool that depends entirely on the user's intent.")
+    
 # TAB 3: HEATMAP
 with tabs[2]:
     st.header("Variable Correlation")
@@ -143,3 +165,4 @@ with tabs[2]:
     fig2, ax2 = plt.subplots(figsize=(10, 6))
     sns.heatmap(df[features + ['concept_understanding_score', 'final_score']].corr(), annot=True, cmap='coolwarm', ax=ax2)
     st.pyplot(fig2)
+

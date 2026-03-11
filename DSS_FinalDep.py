@@ -97,55 +97,57 @@ with tabs[0]:
 # TAB 2: STATISTICAL PROOF
 with tabs[1]:
     st.header("⚖️ The Statistical Reality")
-    st.write("We ran an **Ordinary Least Squares (OLS) Regression** to see if AI usage actually hurts 'Brain Power' (Concept Understanding).")
-
-    # Statistical Calculations
-    X_stats = sm.add_constant(X)
-    stats_model = sm.OLS(y_concept, X_stats).fit()
     
-    # --- Top Level Metrics ---
-    m1, m2, m3 = st.columns(3)
-    m1.metric("Model Confidence (R²)", f"{stats_model.rsquared:.3f}")
-    m2.metric("Observation Count", f"{int(stats_model.nobs)}")
-    m3.metric("F-Statistic", f"{stats_model.fvalue:.2f}")
+    # Summary Statistics
+    r_squared = 0.0007  # From your results
+    
+    col1, col2 = st.columns([1, 1])
+    
+    with col1:
+        st.metric("Model Predictive Power (R²)", f"{r_squared:.4f}")
+        st.info("""
+        **The "Noise" Factor:** An R² of 0.0007 indicates that AI usage and study hours currently explain almost none of the variance in scores. 
+        This suggests that **individual talent, prior knowledge, or teacher quality** are likely much bigger factors than the tools used.
+        """)
+
+    with col2:
+        st.subheader("Impact Coefficients")
+        # Creating a clean table for the coefficients
+        coef_data = {
+            "Variable": ["Study Hours", "AI Content %", "AI Dependency", "Grade Level", "Uses AI"],
+            "Weight": [0.0491, 0.0473, 0.0441, 0.0390, -0.0454]
+        }
+        coef_df = pd.DataFrame(coef_data)
+        st.table(coef_df)
 
     st.divider()
 
-    # --- Two-Column Layout for Data vs Interpretation ---
-    col_table, col_interp = st.columns([3, 2])
+    # --- VISUALIZING THE IMPACT ---
+    st.subheader("Visualizing Feature Importance")
+    fig_coef, ax_coef = plt.subplots(figsize=(8, 4))
+    
+    # Color coding: Green for positive impact, Red for negative
+    colors = ['#27AE60' if x > 0 else '#E74C3C' for x in coef_df['Weight']]
+    
+    sns.barplot(x='Weight', y='Variable', data=coef_df.sort_values('Weight', ascending=False), palette=colors, ax=ax_coef)
+    ax_coef.set_title("Which factors actually move the needle?")
+    st.pyplot(fig_coef)
 
-    with col_table:
-        st.subheader("Regression Coefficients")
-        # Converting the summary to a clean DataFrame
-        results_df = pd.DataFrame({
-            "Coefficient (Impact)": stats_model.params,
-            "P-Value (Significance)": stats_model.pvalues,
-            "Std Error": stats_model.bse
-        })
-        # Style the dataframe to highlight significant p-values
-        st.dataframe(results_df.style.format("{:.4f}").highlight_between(left=0, right=0.05, subset=["P-Value (Significance)"], color="#D4EFDF"))
-
-    with col_interp:
-        st.subheader("📓 How to read this")
-        st.markdown(f"""
-        1. **The Coefficient:** For every 1 point increase in a feature, your Understanding Score changes by this amount.
-        2. **P-Value:** If this is **below 0.05** (highlighted green), that variable is a "Significant Predictor."
-        3. **The AI Verdict:** """)
-        
-        # Dynamic Verdict based on AI Dependency P-Value
-        ai_p = stats_model.pvalues['ai_dependency_score']
-        if ai_p > 0.05:
-            st.success(f"**AI Dependency (p={ai_p:.3f})** has no statistically significant negative impact on understanding. The 'AI Paradox' is real!")
-        else:
-            st.warning(f"**AI Dependency (p={ai_p:.3f})** shows a significant relationship. Check the coefficient to see if it's helping or hurting.")
-
-    # Technical Deep Dive (Expander)
-    with st.expander("View Full Raw Statistical Summary"):
-        st.text(str(stats_model.summary()))
+    # --- THE "SO WHAT?" SECTION ---
+    st.markdown("### 🔍 What does this tell us?")
+    
+    # Logic based on your negative 'uses_ai' vs positive 'ai_dependency'
+    st.warning("""
+    **The AI Paradox:** Simply "using AI" (`-0.0454`) has a slight negative correlation with performance. However, **AI Dependency** (`+0.0441`) and **AI Content %** (`+0.0473`) are positive. 
+    
+    **Translation:** It's not *whether* you use AI, but *how* you use it. Students who integrate AI deeply (high dependency/content) might be using it more effectively than those who just "dabble" in it.
+    """)
+    
 # TAB 3: HEATMAP
 with tabs[2]:
     st.header("Variable Correlation")
     fig2, ax2 = plt.subplots(figsize=(10, 6))
     sns.heatmap(df[features + ['concept_understanding_score', 'final_score']].corr(), annot=True, cmap='coolwarm', ax=ax2)
     st.pyplot(fig2)
+
 

@@ -4,44 +4,61 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 import numpy as np
 from sklearn.linear_model import LinearRegression
+from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_squared_error, r2_score
 
+# --- Page Config ---
 st.set_page_config(page_title="AI Efficiency Study", layout="wide")
 
-# --- 1. CLEANING & TRAINING ENGINE ---
+# --- Title ---
+st.title("Measuring Concept Understanding and Final Score Prediction")
+
+# --- 1. Load and Preprocess Data ---
 @st.cache_data
-def get_trained_models():
-    # Load raw data
-    df_raw = pd.read_csv('ai_impact_student_performance_dataset.csv')
+def load_and_clean_data():
+    # DIRECT LOAD: No checks, assumes file is present and correct
+    df = pd.read_csv('ai_impact_student_performance_dataset.csv')
     
-    # DATA CLEANING: Retain only needed columns as per notebook 
-    # We include 'attendance_percentage' for the simulator logic
-    df_cleaned = df_raw[[
-        'grade_level', 'uses_ai', 'ai_dependency_score',
-        'ai_generated_content_percentage', 'study_hours_per_day',
-        'attendance_percentage', 'concept_understanding_score', 'final_score'
-    ]].copy()
+    # Normalize headers to lowercase 
+    df.columns = df.columns.str.lower()
+    
+    # Select columns and drop missing values
+    # Note: We use the lowercase names here
+    required_cols = [
+        'ai_dependency_score', 'study_hours_per_day', 
+        'ai_generated_content_percentage', 'attendance_percentage',
+        'concept_understanding_score', 'final_score'
+    ]
+    df = df[required_cols]
+    df = df.dropna()
+    
+    return df
 
-    # MODEL TRAINING
+df = load_and_clean_data()
+
+# --- 2. Build the Model ---
+@st.cache_resource
+def train_engines(df):
     features = ['ai_dependency_score', 'study_hours_per_day', 'ai_generated_content_percentage', 'attendance_percentage']
-    X = df_cleaned[features]
-    
-    # Targets
-    y_concept = df_cleaned['concept_understanding_score']
-    y_final = df_cleaned['final_score']
+    X = df[features]
+    y_final = df['final_score']
+    y_concept = df['concept_understanding_score']
 
-    # Train Models
-    model_concept = LinearRegression().fit(X, y_concept)
-    model_final = LinearRegression().fit(X, y_final)
+    # Split data for validation
+    X_train, X_test, y_train, y_test = train_test_split(X, y_final, test_size=0.2, random_state=42)
 
-    # EVALUATION METRICS (Calculated on the full dataset for the "Proof" tab)
-    preds_final = model_final.predict(X)
+    # Train Logistic Regression
+    model_final = LinearRegression().fit(X_train, y_train)
+    model_concept = LinearRegression().fit(X, y_concept) # Trained on all for simulator accuracy
+
+    # Calculate real accuracy metrics on the Test Set
+    y_pred = model_final.predict(X_test)
     metrics = {
-        "r2": r2_score(y_final, preds_final),
-        "mse": mean_squared_error(y_final, preds_final)
+        "r2": r2_score(y_test, y_pred),
+        "mse": mean_squared_error(y_test, y_pred)
     }
-
-    return df_cleaned, model_concept, model_final, metrics, features
+    
+    return model_final, model_concept, metrics, features
 
 # Initialize everything
 df, model_concept, model_final, stats, feature_list = get_trained_models()

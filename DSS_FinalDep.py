@@ -84,4 +84,28 @@ with tabs[0]:
     # THE VERDICT BOX
     st.divider()
     if efficiency_gap >= 95:
-        st.success(f"### ✅ Verdict: Efficient Mastery\nEven with AI use,
+        st.success(f"### ✅ Verdict: Efficient Mastery\nEven with AI use, you are achieving {efficiency_gap:.1f}% of the mastery seen in high-effort traditional students. You are working smarter, not harder.")
+    elif efficiency_gap >= 85:
+        st.info("### ℹ️ Verdict: Balanced Learning\nYou are maintaining solid performance. Your AI usage is acting as a helpful tool rather than a crutch.")
+    else:
+        st.warning("### ⚠️ Verdict: Risk of Learning Loss\nYour current habits suggest that your understanding is dipping. Try increasing attendance or manual study hours.")
+
+# TAB 2: STATISTICAL PROOF
+with tabs[1]:
+    st.header("Does AI 'Tank' Brainpower?")
+    st.write("Regression analysis showing AI variables do not negatively impact understanding.")
+    
+    X_stats = sm.add_constant(X)
+    stats_model = sm.OLS(y_concept, X_stats).fit()
+    st.text(str(stats_model.summary().tables[1]))
+    
+    st.markdown("""
+    > **The Data Proof:** Look at the 'P>|t|' column. If the number is greater than 0.05, it means AI has **no significant negative effect** on understanding.
+    """)
+
+# TAB 3: HEATMAP
+with tabs[2]:
+    st.header("Variable Correlation")
+    fig2, ax2 = plt.subplots(figsize=(10,6))
+    sns.heatmap(df[features + ['concept_understanding_score', 'final_score']].corr(), annot=True, cmap='coolwarm', ax=ax2)
+    st.pyplot(fig2)

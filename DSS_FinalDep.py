@@ -3,111 +3,100 @@ import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
 import statsmodels.api as sm
-from sklearn.model_selection import train_test_split
-from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import accuracy_score
+import numpy as np
+from sklearn.linear_model import LinearRegression
 
-# Page configuration
-st.set_page_config(page_title="AI & Concept Understanding Study", layout="wide")
+st.set_page_config(page_title="AI Efficiency Study", layout="wide")
 
-# Title
-st.title("📚 Study: Does AI Usage Impact Concept Understanding?")
-st.markdown("""
-This application focuses on **Concept Understanding** as the target. We want to see if
-AI dependency and AI-generated content actually hurt a student's grasp of their lessons.
-""")
-
-# Load data
+# 1. LOAD & PREP DATA
 @st.cache_data
 def load_data():
-    # Make sure this filename matches your file on GitHub
+    # Ensure your CSV is named exactly this in your GitHub repo
     df = pd.read_csv('ai_impact_student_performance_dataset.csv')
     return df
 
 df = load_data()
 
-# 1. THE DATASET AT A GLANCE
-st.header("📌 Overview of Learning Metrics")
-col1, col2, col3 = st.columns(3)
-col1.metric("Avg Concept Understanding", f"{df['concept_understanding_score'].mean():.2f}/10")
-col2.metric("Avg AI Dependency", f"{df['ai_dependency_score'].mean():.2f}/10")
-col3.metric("Avg Study Hours/Day", f"{df['study_hours_per_day'].mean():.2f} hrs")
+# 2. TRAIN THE "ENGINE" (Simple Linear Regression for the Simulator)
+# We train it once on startup so the sliders can use it live
+features = ['ai_dependency_score', 'study_hours_per_day', 'ai_generated_content_percentage']
+X = df[features]
+y_concept = df['concept_understanding_score']
+y_final = df['final_score']
 
-st.divider()
+model_concept = LinearRegression().fit(X, y_concept)
+model_final = LinearRegression().fit(X, y_final)
 
-# 2. THE VISUAL PROOF (HEATMAP)
-st.header("📉 Statistical Correlation (Focus on Understanding)")
-st.write("This map shows if AI usage has a negative relationship (red/blue) with understanding.")
+# --- SIDEBAR: THE SIMULATOR INPUTS ---
+st.sidebar.header("🕹️ Learning Style Simulator")
+st.sidebar.markdown("Adjust these to see the 'AI Paradox' in action.")
 
-# Focus columns
-cols = ['ai_dependency_score', 'ai_generated_content_percentage', 
-        'study_hours_per_day', 'concept_understanding_score']
-corr_matrix = df[cols].corr()
+grade = st.sidebar.selectbox("Grade Level", ["10th Grade", "11th Grade", "12th Grade", "1st Year College", "2nd Year College", "3rd Year College"])
+hrs = st.sidebar.slider("Study Hours Per Day", 0.5, 10.0, 3.0)
+ai_dep = st.sidebar.slider("AI Dependency (1-10)", 1, 10, 5)
+ai_pct = st.sidebar.slider("AI Content Percentage", 0, 100, 30)
 
-fig_heat, ax_heat = plt.subplots(figsize=(10, 6))
-sns.heatmap(corr_matrix, annot=True, cmap='RdBu_r', center=0, fmt=".2f", ax=ax_heat)
-st.pyplot(fig_heat)
+# --- MAIN PAGE ---
+st.title("📊 AI & Student Performance: The Efficiency Multiplier")
 
-st.info("""
-**How to read this:** Look at the 'concept_understanding_score' row. 
-Notice that AI Dependency (0.02) and AI Content (0.02) are almost zero. 
-This means as AI usage goes up, understanding DOES NOT go down.
-""")
+tabs = st.tabs(["The Simulator", "Data Proof", "Correlation"])
 
-st.divider()
+# TAB 1: THE INTERACTIVE STORY
+with tabs[0]:
+    st.header("The Learning Style Simulator")
+    st.write("Can AI replace the 4-hour grind? Simulate your profile below.")
 
-# 3. THE MATHEMATICAL PROOF (REGRESSION)
-st.header("⚖️ Statistical Analysis")
-st.write("We use Multiple Linear Regression to see if AI predicts a drop in understanding.")
-
-X = df[['ai_dependency_score', 'ai_generated_content_percentage', 'study_hours_per_day']]
-y = df['concept_understanding_score']
-X = sm.add_constant(X)
-model = sm.OLS(y, X).fit()
-
-st.text(str(model.summary().tables[1]))
-
-st.markdown("""
-**The Result:** The 'P-values' (P>|t|) for AI scores are all higher than 0.05. 
-In statistics, this means AI has **no significant impact** on understanding.
-""")
-
-st.divider()
-
-# 4. THE SIMULATOR (HIGH UNDERSTANDING PREDICTOR)
-st.header("🤖 Simulator: Will AI usage lead to High Understanding?")
-st.write("""
-To make this easy to understand, we defined **'High Understanding'** as a score of 7/10 or higher.
-The AI model below predicts if a student will reach that level based on their habits.
-""")
-
-# Create a binary target for 'High Understanding'
-df['high_understanding'] = (df['concept_understanding_score'] >= 7).astype(int)
-
-# Logistic Regression setup
-features = ['ai_dependency_score', 'ai_generated_content_percentage', 'study_hours_per_day']
-X_sim = df[features]
-y_sim = df['high_understanding']
-
-X_train, X_test, y_train, y_test = train_test_split(X_sim, y_sim, test_size=0.2, random_state=42)
-lr_model = LogisticRegression()
-lr_model.fit(X_train, y_train)
-
-# Simulator UI
-col_in, col_out = st.columns([1, 1])
-
-with col_in:
-    st.subheader("1. Adjust Student Habits")
-    u_dep = st.slider("AI Dependency Score (0-10)", 0, 10, 5)
-    u_content = st.slider("AI Content Percentage (0-100%)", 0, 100, 30)
-    u_hours = st.slider("Manual Study Hours/Day", 0, 10, 3)
-
-with col_out:
-    prediction = lr_model.predict([[u_dep, u_content, u_hours]])
-    # Get the probability for the 'High Understanding' class
-    prob = lr_model.predict_proba([[u_dep, u_content, u_hours]])[0][1]
+    # Calculations
+    user_input = np.array([[ai_dep, hrs, ai_pct]])
+    pred_understanding = model_concept.predict(user_input)[0]
+    pred_final = model_final.predict(user_input)[0]
     
-    st.subheader("2. Prediction Result")
-    if prediction[0] == 1:
-        st.success("**PREDICTION: HIGH UNDERSTANDING (>= 7/10)**")
-        st.write(f"**Confidence Level: {prob*100
+    # Traditional Benchmark (Hardcoded based on your 98.4% finding)
+    # Average of students with 5+ study hours and < 2 AI dependency
+    benchmark_score = df[(df['study_hours_per_day'] >= 5) & (df['ai_dependency_score'] < 2)]['final_score'].mean()
+    efficiency_gap = (pred_final / benchmark_score) * 100
+
+    # Layout Columns
+    col1, col2, col3 = st.columns(3)
+    col1.metric("Predicted Understanding", f"{pred_understanding:.2f}/10")
+    col2.metric("Predicted Final Score", f"{pred_final:.1f}%")
+    col3.metric("Proficiency Parity", f"{efficiency_gap:.1f}%", help="How close you are to a high-effort traditional student")
+
+    # Visual Comparison
+    st.markdown("### User vs. Traditional Gold Standard")
+    chart_data = pd.DataFrame({
+        "Category": ["Your Profile", "Traditional (5+ Hrs, No AI)"],
+        "Final Score": [pred_final, benchmark_score]
+    })
+    
+    fig, ax = plt.subplots(figsize=(8, 3))
+    sns.barplot(data=chart_data, x="Final Score", y="Category", palette=["#2E86C1", "#ABB2B9"], ax=ax)
+    ax.set_xlim(0, 100)
+    st.pyplot(fig)
+
+    # THE VERDICT BOX
+    st.divider()
+    if efficiency_gap >= 95:
+        st.success(f"### ✅ Verdict: Efficient Mastery\nYou are achieving {efficiency_gap:.1f}% of traditional mastery while utilizing AI for efficiency. This supports the 'Efficiency Multiplier' theory.")
+    elif efficiency_gap >= 85:
+        st.info("### ℹ️ Verdict: Balanced Learning\nYou are maintaining solid performance with a hybrid approach.")
+    else:
+        st.warning("### ⚠️ Verdict: Diminishing Returns\nYour current configuration suggests lower retention. Consider increasing manual study hours.")
+
+# TAB 2: STATISTICAL PROOF
+with tabs[1]:
+    st.header("Does AI 'Tank' Brainpower?")
+    st.write("Statistical Regression showing that AI variables do not negatively impact understanding.")
+    
+    X_stats = sm.add_constant(X)
+    stats_model = sm.OLS(y_concept, X_stats).fit()
+    st.text(str(stats_model.summary()))
+    
+    st.markdown("> **The Mic Drop:** Notice the p-values. AI dependency does not have a statistically significant negative coefficient, proving it's a neutral-to-positive tool.")
+
+# TAB 3: HEATMAP
+with tabs[2]:
+    st.header("Variable Correlation")
+    fig2, ax2 = plt.subplots()
+    sns.heatmap(df.corr(numeric_only=True), annot=True, cmap='coolwarm', ax=ax2)
+    st.pyplot(fig2)

@@ -96,18 +96,56 @@ with tabs[0]:
 
 # TAB 2: STATISTICAL PROOF
 with tabs[1]:
-    st.header("Does AI 'Tank' Brainpower?")
-    st.write("Regression analysis showing AI variables do not negatively impact understanding.")
-    
+    st.header("⚖️ The Statistical Reality")
+    st.write("We ran an **Ordinary Least Squares (OLS) Regression** to see if AI usage actually hurts 'Brain Power' (Concept Understanding).")
+
+    # Statistical Calculations
     X_stats = sm.add_constant(X)
     stats_model = sm.OLS(y_concept, X_stats).fit()
-    st.text(str(stats_model.summary().tables[1]))
     
-    st.markdown("> **Statistical Insight:** Look at the 'P>|t|' column. Numbers higher than 0.05 mean the variable (like AI Dependency) has no significant negative effect on understanding.")
+    # --- Top Level Metrics ---
+    m1, m2, m3 = st.columns(3)
+    m1.metric("Model Confidence (R²)", f"{stats_model.rsquared:.3f}")
+    m2.metric("Observation Count", f"{int(stats_model.nobs)}")
+    m3.metric("F-Statistic", f"{stats_model.fvalue:.2f}")
 
+    st.divider()
+
+    # --- Two-Column Layout for Data vs Interpretation ---
+    col_table, col_interp = st.columns([3, 2])
+
+    with col_table:
+        st.subheader("Regression Coefficients")
+        # Converting the summary to a clean DataFrame
+        results_df = pd.DataFrame({
+            "Coefficient (Impact)": stats_model.params,
+            "P-Value (Significance)": stats_model.pvalues,
+            "Std Error": stats_model.bse
+        })
+        # Style the dataframe to highlight significant p-values
+        st.dataframe(results_df.style.format("{:.4f}").highlight_between(left=0, right=0.05, subset=["P-Value (Significance)"], color="#D4EFDF"))
+
+    with col_interp:
+        st.subheader("📓 How to read this")
+        st.markdown(f"""
+        1. **The Coefficient:** For every 1 point increase in a feature, your Understanding Score changes by this amount.
+        2. **P-Value:** If this is **below 0.05** (highlighted green), that variable is a "Significant Predictor."
+        3. **The AI Verdict:** """)
+        
+        # Dynamic Verdict based on AI Dependency P-Value
+        ai_p = stats_model.pvalues['ai_dependency_score']
+        if ai_p > 0.05:
+            st.success(f"**AI Dependency (p={ai_p:.3f})** has no statistically significant negative impact on understanding. The 'AI Paradox' is real!")
+        else:
+            st.warning(f"**AI Dependency (p={ai_p:.3f})** shows a significant relationship. Check the coefficient to see if it's helping or hurting.")
+
+    # Technical Deep Dive (Expander)
+    with st.expander("View Full Raw Statistical Summary"):
+        st.text(str(stats_model.summary()))
 # TAB 3: HEATMAP
 with tabs[2]:
     st.header("Variable Correlation")
     fig2, ax2 = plt.subplots(figsize=(10, 6))
     sns.heatmap(df[features + ['concept_understanding_score', 'final_score']].corr(), annot=True, cmap='coolwarm', ax=ax2)
     st.pyplot(fig2)
+

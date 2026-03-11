@@ -7,17 +7,17 @@ from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import accuracy_score
 
-# Set page layout
-st.set_page_config(page_title="AI Impact Study", layout="wide")
+# Page configuration
+st.set_page_config(page_title="AI & Concept Understanding Study", layout="wide")
 
-# Title and Context
-st.title("📊 Study: The Impact of AI on Student Learning")
+# Title
+st.title("📚 Study: Does AI Usage Impact Concept Understanding?")
 st.markdown("""
-This dashboard presents the findings on whether AI dependency affects conceptual understanding 
-and academic success. Use the sections below to explore the data and statistical proofs.
+This application focuses on **Concept Understanding** as the target. We want to see if
+AI dependency and AI-generated content actually hurt a student's grasp of their lessons.
 """)
 
-# 1. DATA LOADING
+# Load data
 @st.cache_data
 def load_data():
     # Make sure this filename matches your file on GitHub
@@ -26,78 +26,88 @@ def load_data():
 
 df = load_data()
 
-# 2. KEY METRICS
-st.header("📌 Key Performance Indicators")
-col1, col2, col3, col4 = st.columns(4)
-col1.metric("Total Students", len(df))
-col2.metric("Avg Understanding", f"{df['concept_understanding_score'].mean():.2f}/10")
-col3.metric("Avg AI Dependency", f"{df['ai_dependency_score'].mean():.2f}/10")
-col4.metric("Passing Rate", f"{(df['passed'].mean()*100):.1f}%")
+# 1. THE DATASET AT A GLANCE
+st.header("📌 Overview of Learning Metrics")
+col1, col2, col3 = st.columns(3)
+col1.metric("Avg Concept Understanding", f"{df['concept_understanding_score'].mean():.2f}/10")
+col2.metric("Avg AI Dependency", f"{df['ai_dependency_score'].mean():.2f}/10")
+col3.metric("Avg Study Hours/Day", f"{df['study_hours_per_day'].mean():.2f} hrs")
 
 st.divider()
 
-# 3. CORRELATION HEATMAP (Visual Evidence)
-st.header("📉 Statistical Relationships (Heatmap)")
-st.write("We use this to see if AI usage (Dependency/Content) correlates with lower understanding.")
+# 2. THE VISUAL PROOF (HEATMAP)
+st.header("📉 Statistical Correlation (Focus on Understanding)")
+st.write("This map shows if AI usage has a negative relationship (red/blue) with understanding.")
 
-# Select relevant columns for the heatmap
-corr_cols = ['ai_dependency_score', 'ai_generated_content_percentage', 
-             'concept_understanding_score', 'study_hours_per_day', 'final_score']
-corr_matrix = df[corr_cols].corr()
+# Focus columns
+cols = ['ai_dependency_score', 'ai_generated_content_percentage', 
+        'study_hours_per_day', 'concept_understanding_score']
+corr_matrix = df[cols].corr()
 
 fig_heat, ax_heat = plt.subplots(figsize=(10, 6))
 sns.heatmap(corr_matrix, annot=True, cmap='RdBu_r', center=0, fmt=".2f", ax=ax_heat)
 st.pyplot(fig_heat)
 
-st.info("💡 **Key Finding:** There is almost **zero correlation** between AI Dependency and Understanding. This suggests that using AI tools does not inherently decrease a student's grasp of the material.")
+st.info("""
+**How to read this:** Look at the 'concept_understanding_score' row. 
+Notice that AI Dependency (0.02) and AI Content (0.02) are almost zero. 
+This means as AI usage goes up, understanding DOES NOT go down.
+""")
 
 st.divider()
 
-# 4. STATISTICAL PROOF (Multiple Linear Regression)
-st.header("⚖️ Does AI Predict Understanding?")
-st.write("This regression model checks if AI usage is a significant 'predictor' of learning loss.")
+# 3. THE MATHEMATICAL PROOF (REGRESSION)
+st.header("⚖️ Statistical Analysis")
+st.write("We use Multiple Linear Regression to see if AI predicts a drop in understanding.")
 
-X_lin = df[['ai_dependency_score', 'ai_generated_content_percentage', 'study_hours_per_day']]
-y_lin = df['concept_understanding_score']
-X_lin = sm.add_constant(X_lin)
-lin_model = sm.OLS(y_lin, X_lin).fit()
+X = df[['ai_dependency_score', 'ai_generated_content_percentage', 'study_hours_per_day']]
+y = df['concept_understanding_score']
+X = sm.add_constant(X)
+model = sm.OLS(y, X).fit()
 
-# Displaying results in a clean way
-st.text(str(lin_model.summary().tables[1]))
-st.write("**Conclusion:** High P-values (P > |t|) for AI scores confirm that AI usage is **not** a statistically significant cause of lower understanding.")
+st.text(str(model.summary().tables[1]))
+
+st.markdown("""
+**The Result:** The 'P-values' (P>|t|) for AI scores are all higher than 0.05. 
+In statistics, this means AI has **no significant impact** on understanding.
+""")
 
 st.divider()
 
-# 5. PASS/FAIL PREDICTOR (Logistic Regression)
-st.header("🤖 Live Predictor: Will a Student Pass?")
-st.write("Using `scikit-learn` to predict if a student will pass based on their habits.")
+# 4. THE SIMULATOR (HIGH UNDERSTANDING PREDICTOR)
+st.header("🤖 Simulator: Will AI usage lead to High Understanding?")
+st.write("""
+To make this easy to understand, we defined **'High Understanding'** as a score of 7/10 or higher.
+The AI model below predicts if a student will reach that level based on their habits.
+""")
 
-# Prepare Logistic Regression
-features = ['ai_dependency_score', 'concept_understanding_score', 'study_hours_per_day']
-X_log = df[features]
-y_log = df['passed']
+# Create a binary target for 'High Understanding'
+df['high_understanding'] = (df['concept_understanding_score'] >= 7).astype(int)
 
-X_train, X_test, y_train, y_test = train_test_split(X_log, y_log, test_size=0.2, random_state=42)
+# Logistic Regression setup
+features = ['ai_dependency_score', 'ai_generated_content_percentage', 'study_hours_per_day']
+X_sim = df[features]
+y_sim = df['high_understanding']
+
+X_train, X_test, y_train, y_test = train_test_split(X_sim, y_sim, test_size=0.2, random_state=42)
 lr_model = LogisticRegression()
 lr_model.fit(X_train, y_train)
 
-# Interactive UI for User
-col_input, col_result = st.columns([1, 1])
+# Simulator UI
+col_in, col_out = st.columns([1, 1])
 
-with col_input:
-    st.subheader("Adjust Student Stats")
-    user_dep = st.slider("AI Dependency (0-10)", 0, 10, 5)
-    user_und = st.slider("Concept Understanding (0-10)", 0, 10, 7)
-    user_hrs = st.slider("Study Hours Per Day", 0, 10, 3)
+with col_in:
+    st.subheader("1. Adjust Student Habits")
+    u_dep = st.slider("AI Dependency Score (0-10)", 0, 10, 5)
+    u_content = st.slider("AI Content Percentage (0-100%)", 0, 100, 30)
+    u_hours = st.slider("Manual Study Hours/Day", 0, 10, 3)
 
-with col_result:
-    prediction = lr_model.predict([[user_dep, user_und, user_hrs]])
-    prob = lr_model.predict_proba([[user_dep, user_und, user_hrs]])[0][1]
+with col_out:
+    prediction = lr_model.predict([[u_dep, u_content, u_hours]])
+    # Get the probability for the 'High Understanding' class
+    prob = lr_model.predict_proba([[u_dep, u_content, u_hours]])[0][1]
     
-    st.subheader("Model Result")
+    st.subheader("2. Prediction Result")
     if prediction[0] == 1:
-        st.success(f"PREDICTION: PASS (Confidence: {prob*100:.1f}%)")
-    else:
-        st.error(f"PREDICTION: FAIL (Confidence: {(1-prob)*100:.1f}%)")
-
-st.caption(f"Model Accuracy Score: {accuracy_score(y_test, lr_model.predict(X_test))*100:.2f}%")
+        st.success("**PREDICTION: HIGH UNDERSTANDING (>= 7/10)**")
+        st.write(f"**Confidence Level: {prob*100
